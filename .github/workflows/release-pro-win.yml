@@ -46,6 +46,16 @@ jobs:
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: pnpm tauri:build
 
+      # 重命名安装包：去掉文件名中的版本号（保留架构），Tauri bundler 不支持自定义安装包文件名
+      - name: Rename bundles (strip version)
+        shell: pwsh
+        run: |
+          Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe, src-tauri/target/release/bundle/msi/*.msi | ForEach-Object {
+            $newName = $_.Name -replace '_\d+(\.\d+)*_', '_'
+            Rename-Item $_.FullName -NewName $newName
+          }
+          Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe, src-tauri/target/release/bundle/msi/*.msi | Select-Object -ExpandProperty Name
+
       # 打包成zip文件
       - name: Create zip package
         run: |
