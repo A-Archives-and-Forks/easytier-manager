@@ -136,7 +136,7 @@ struct CheckConfigResult {
 /// 执行 `easytier-core --check-config` 并返回退出码与输出。
 /// --check-config 合法时静默退出 0、非法时静默退出 1，必须靠退出码区分，
 /// 因此不能复用只返回 stdout 的 run_cli。
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command]
 fn check_config(app: AppHandle, program: String, config_path: String) -> CheckConfigResult {
     #[cfg(target_os = "macos")]
     let program = match (|| -> Result<String, String> {
