@@ -4,6 +4,7 @@ import { join } from '@tauri-apps/api/path'
 import { attachConsole, debug, error, info, warn } from '@tauri-apps/plugin-log'
 import { Command, type SpawnOptions } from '@tauri-apps/plugin-shell'
 import { getCliDir, getConfigDir, getCoreDir, getResourceDir, readFileContent } from './fileUtil'
+import { checkConfigFile } from './configCheckUtil'
 import { normalizeRpcPortal } from './rpcPortal'
 import { extractConfigNameFromPath, parseCoreCommandLine } from './coreProcess'
 import { getPlatform, sleep } from './sysUtil'
@@ -221,6 +222,12 @@ export async function executeBack(
 // 运行 easytier-core 配置
 export async function runEasyTierCore(configFileName: string): Promise<any> {
   try {
+    // 启动前校验配置文件，避免无效配置反复启动失败
+    const checkResult = await checkConfigFile(configFileName)
+    if (!checkResult.valid) {
+      error(`配置校验失败，取消启动：${checkResult.message}`)
+      return { code: 403, msg: checkResult.message }
+    }
     // 读取配置文件获取日志配置和 rpc_portal
     // v2.5.0 起 rpc_portal 不再从配置文件读取，需通过 --rpc-portal 命令行参数传递
     const { logDir, logLevel, rpcPortal } = await getConfigFromFile(configFileName)

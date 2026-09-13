@@ -45,11 +45,79 @@ interface VpnPortalConfig {
   wireguard_listen: string
 }
 
+/** 端口转发规则 */
+interface PortForwardRule {
+  bind_addr: string
+  dst_addr: string
+  proto: string
+}
+
+/** ACL 组声明：组名 + 共享密钥，所有节点的 declares 必须完全一致 */
+interface AclGroupDeclare {
+  group_name: string
+  group_secret: string
+}
+
+/** ACL 分组身份：本节点所属组 + 已知组的密钥声明 */
+interface AclGroup {
+  members?: string[]
+  declares?: AclGroupDeclare[]
+}
+
+/**
+ * ACL 规则。
+ * action：0 无操作 / 1 允许 / 2 拒绝；
+ * protocol：0 未指定 / 1 TCP / 2 UDP / 3 ICMP / 4 ICMPv6 / 5 任何
+ */
+interface AclRule {
+  name: string
+  description?: string
+  priority?: number // 0-65535，越大越先匹配
+  action?: number
+  source_groups?: string[]
+  destination_groups?: string[]
+  source_ips?: string[] // CIDR，如 10.144.144.2/32
+  destination_ips?: string[]
+  protocol?: number
+  ports?: string[] // 如 ["3389"]、["8000-9000"]
+  source_ports?: string[]
+  rate_limit?: number // bps，0 = 不限
+  burst_limit?: number // bps
+  stateful?: boolean
+  enabled?: boolean
+}
+
+/** ACL 规则链。chain_type：0 未指定 / 1 入站 / 2 出站 / 3 转发(子网代理) */
+interface AclChain {
+  name: string
+  description?: string
+  chain_type?: number
+  default_action?: number // 1 允许 / 2 拒绝
+  enabled?: boolean
+  rules?: AclRule[]
+}
+
+interface AclV1 {
+  group?: AclGroup
+  chains?: AclChain[]
+}
+
+interface AclConfig {
+  acl_v1: AclV1
+}
+
 interface Flags {
   default_protocol: string
   dev_name: string
   enable_encryption: boolean
   encryption_algorithm?: string // 加密算法
+  data_compress_algo?: string // 压缩算法：none, zstd
+  compression_algorithm?: string // 压缩算法（旧字段名，保留兼容）
+  relay_network_whitelist?: string // 中继网络白名单，* 为全部
+  accept_dns?: boolean // 魔法 DNS
+  bind_device?: boolean // 连接器套接字绑定物理设备
+  socks5?: string // SOCKS5 服务器
+  enable_ipv6?: boolean // 启用 IPv6
   mtu?: number // MTU 大小
   latency_first: boolean
   enable_exit_node: boolean
@@ -104,6 +172,9 @@ interface EasyTierConfig {
   clear_log_on_run?: boolean
   peer: PeerConfig[]
   proxy_network: NetworkConfig[]
+  mapped_listeners?: string[] // 映射监听器（公网地址）
+  port_forward?: PortForwardRule[] // 端口转发规则
+  acl?: AclConfig // 访问控制（ACL），不配置时不写入 TOML
   file_logger: FileLoggerConfig
   console_logger: ConsoleLoggerConfig
   rpc_portal: string
@@ -117,11 +188,10 @@ interface EasyTierConfig {
   credential_file?: string // 凭据存储文件路径
   tcp_whitelist?: string // TCP 白名单
   udp_whitelist?: string // UDP 白名单
-  stun_server: string[] // STUN 服务器列表（保留兼容）
+  stun_server?: string[] // STUN 服务器列表（保留兼容）
   stun_servers?: string[] // STUN 服务器列表
   stun_servers_v6?: string[] // IPv6 STUN 服务器列表
   flags: Flags
-  flags_struct: Flags
 }
 
 interface SysInfo {

@@ -42,6 +42,7 @@ const defaultFormData: EasyTierFormData | any = {
     wireguard_listen: ''
   },
   port_forward: [], // 端口转发
+  acl: undefined, // 访问控制（ACL），不配置时不写入 TOML
   flags: {
     default_protocol: 'tcp',
     dev_name: '',
@@ -65,7 +66,6 @@ const defaultFormData: EasyTierFormData | any = {
     ipv6_listener: undefined,
     socks5: undefined,
     relay_network_whitelist: '*',
-    compression_algorithm: undefined,
     bind_device: true,
     disable_kcp_input: false,
     enable_kcp_proxy: false,

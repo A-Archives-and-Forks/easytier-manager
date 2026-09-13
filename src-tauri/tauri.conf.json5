@@ -42,7 +42,11 @@
         // 是否透明
         "transparent": false,
         // 是否启用开发者工具
-        "devtools": false
+        "devtools": false,
+        // 附加 WebView2 浏览器参数（仅 Windows 生效）：
+        // 禁用 HTTP 缓存。否则 WebView2 会缓存 http://tauri.localhost 的入口 HTML，
+        // 应用升级后仍加载旧版前端资源，表现为新增页面/功能不出现，需手动清缓存
+        "additionalBrowserArgs": "--disable-http-cache"
       }
     ],
     // 安全相关配置

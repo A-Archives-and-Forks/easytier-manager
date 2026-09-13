@@ -125,6 +125,66 @@ fn run_command(program: String, args: Vec<String>) -> String {
     };
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CheckConfigResult {
+    code: i32,
+    stdout: String,
+    stderr: String,
+}
+
+/// 执行 `easytier-core --check-config` 并返回退出码与输出。
+/// --check-config 合法时静默退出 0、非法时静默退出 1，必须靠退出码区分，
+/// 因此不能复用只返回 stdout 的 run_cli。
+#[tauri::command(rename_all = "snake_case")]
+fn check_config(app: AppHandle, program: String, config_path: String) -> CheckConfigResult {
+    #[cfg(target_os = "macos")]
+    let program = match (|| -> Result<String, String> {
+        let data_dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|error| format!("failed to locate application data directory: {error}"))?;
+        let expected = data_dir.join("resource/current/easytier-core");
+        let requested = Path::new(&program)
+            .canonicalize()
+            .map_err(|error| format!("failed to resolve core path: {error}"))?;
+        let expected = expected
+            .canonicalize()
+            .map_err(|error| format!("failed to resolve managed core path: {error}"))?;
+        if requested != expected {
+            return Err("core path is outside the managed core directory".to_string());
+        }
+        Ok(expected.to_string_lossy().to_string())
+    })() {
+        Ok(program) => program,
+        Err(error) => {
+            return CheckConfigResult {
+                code: -1,
+                stdout: String::new(),
+                stderr: error,
+            }
+        }
+    };
+    #[cfg(not(target_os = "macos"))]
+    let _ = app;
+
+    match command_output(
+        &program,
+        &["--check-config".to_string(), "-c".to_string(), config_path],
+    ) {
+        Ok(output) => CheckConfigResult {
+            code: output.status.code().unwrap_or(-1),
+            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+        },
+        Err(e) => CheckConfigResult {
+            code: -1,
+            stdout: String::new(),
+            stderr: format!("failed to execute core: {e}"),
+        },
+    }
+}
+
 fn ensure_child_path(root: &Path, path: &Path) -> Result<PathBuf, String> {
     let root = root
         .canonicalize()
@@ -553,6 +613,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             run_command,
             run_cli,
+            check_config,
             install_core_archive,
             start_core_macos,
             stop_core_macos,

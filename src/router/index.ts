@@ -47,6 +47,24 @@ export const constantRouterMap: AppRouteRecordRaw[] = [
     ]
   },
   {
+    path: '/instance',
+    component: Layout,
+    name: 'instance',
+    meta: {},
+    children: [
+      {
+        path: '',
+        component: () => import('@/views/instance/index.vue'),
+        name: 'InstanceManagement',
+        meta: {
+          title: t('router.instanceManagement'),
+          icon: 'mdi:tune-vertical',
+          noCache: false
+        }
+      }
+    ]
+  },
+  {
     path: '/config',
     component: Layout,
     name: 'config',

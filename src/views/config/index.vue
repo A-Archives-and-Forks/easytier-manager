@@ -7,6 +7,7 @@ import { CONFIG_PATH, PREFIX_SVC } from '@/constants/easytier'
 import { useI18n } from '@/hooks/web/useI18n'
 import { useEasyTierStore } from '@/store/modules/easytier'
 import type { EasyTierFormData } from '@/types/formTypes'
+import { checkConfigFile } from '@/utils/configCheckUtil'
 import {
   deleteFileOrDir,
   getConfigDir,
@@ -131,6 +132,22 @@ const readFileData = async (fileName: string) => {
   dataConfig.value = (await readFileContent(CONFIG_PATH + '/' + fileName)) as string
 }
 
+/**
+ * 保存后用 easytier-core --check-config 校验配置文件，
+ * 校验失败只提示不阻断保存（文件中的未知自定义键核心是容忍的）。
+ */
+const notifyIfConfigInvalid = async (fileName: string) => {
+  const result = await checkConfigFile(fileName)
+  if (!result.valid) {
+    ElNotification({
+      title: t('common.reminder'),
+      message: t('easytier.configCheckFailed') + (result.message ? `：${result.message}` : ''),
+      type: 'warning',
+      duration: 8000
+    })
+  }
+}
+
 const edit = async (row: any) => {
   dialogTitle.value = t('exampleDemo.edit')
   actionType.value = 'edit'
@@ -221,6 +238,16 @@ const cleanupOptionalFormFields = (data: EasyTierFormData) => {
   if (data.flags?.ipv6_public_addr_prefix === '') {
     data.flags.ipv6_public_addr_prefix = undefined
   }
+
+  // ACL：没有任何分组/声明/规则链时不写入 TOML
+  if (data.acl) {
+    const v1 = data.acl.acl_v1
+    const hasGroup = (v1?.group?.members?.length ?? 0) > 0 || (v1?.group?.declares?.length ?? 0) > 0
+    const hasChains = (v1?.chains?.length ?? 0) > 0
+    if (!hasGroup && !hasChains) {
+      data.acl = undefined
+    }
+  }
 }
 
 /**
@@ -303,6 +330,7 @@ const addConfigAction = async () => {
         CONFIG_PATH + '/' + configFileName.value + '.toml',
         toml.stringify(formData.value)
       )
+      await notifyIfConfigInvalid(configFileName.value + '.toml')
       ElNotification({
         title: t('common.reminder'),
         message: t('common.accessSuccess'),
@@ -337,6 +365,7 @@ const addConfigAction = async () => {
         }
       }
       await writeFileContent(CONFIG_PATH + '/' + configFileName.value + '.toml', dataConfig.value)
+      await notifyIfConfigInvalid(configFileName.value + '.toml')
       ElNotification({
         title: t('common.reminder'),
         message: t('common.accessSuccess'),
@@ -440,6 +469,7 @@ const saveConfigAction = async () => {
           CONFIG_PATH + '/' + configFileName.value + '.toml',
           toml.stringify(formData.value)
         )
+        await notifyIfConfigInvalid(configFileName.value + '.toml')
         ElNotification({
           title: t('common.reminder'),
           message: t('common.accessSuccess'),
@@ -477,6 +507,7 @@ const saveConfigAction = async () => {
         CONFIG_PATH + '/' + configFileName.value + '.toml',
         toml.stringify(parseValue)
       )
+      await notifyIfConfigInvalid(configFileName.value + '.toml')
       configFileName.value = ''
       dialogVisible.value = false
       ElNotification({
@@ -567,6 +598,19 @@ const confirmInstallService = async () => {
 
   const configPath = await join(await getConfigDir(), row.fileName)
   const serviceName = PREFIX_SVC + row.configFileName
+
+  // 安装前校验配置文件，避免把无效配置注册成开机自启服务
+  const checkResult = await checkConfigFile(row.fileName)
+  if (!checkResult.valid) {
+    ElNotification({
+      title: t('common.reminder'),
+      message:
+        t('easytier.configCheckFailed') + (checkResult.message ? `：${checkResult.message}` : ''),
+      type: 'error',
+      duration: 8000
+    })
+    return
+  }
 
   let result = false
 

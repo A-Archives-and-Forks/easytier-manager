@@ -1689,7 +1689,295 @@
           </el-form-item>
         </el-col>
       </el-row>
+
+      <el-divider direction="horizontal">
+        <el-icon class="mr-4px">
+          <Key />
+        </el-icon>
+        {{ t('easytier.aclSection') }}
+      </el-divider>
+      <el-row>
+        <el-col :md="24" :sm="24" :xs="24">
+          <el-form-item :label="t('easytier.aclMembers')">
+            <el-select
+              v-model="aclMembers"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              clearable
+              :placeholder="t('easytier.aclMembersPlaceholder')"
+              style="width: 100%"
+            />
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="24">
+          <el-form-item :label="t('easytier.aclDeclares')">
+            <div
+              class="w-full bg-[var(--el-fill-color-blank)] rounded-8px border border-[var(--el-border-color-lighter)] overflow-hidden"
+            >
+              <el-table
+                :data="aclDeclares"
+                style="width: 100%"
+                :header-cell-style="{
+                  background: 'var(--el-fill-color-light)',
+                  color: 'var(--el-text-color-primary)'
+                }"
+              >
+                <el-table-column prop="group_name" :label="t('easytier.aclGroupName')" width="220">
+                  <template #default="scope">
+                    <el-input v-model="scope.row.group_name" clearable />
+                  </template>
+                </el-table-column>
+                <el-table-column prop="group_secret" :label="t('easytier.aclGroupSecret')">
+                  <template #default="scope">
+                    <el-input
+                      v-model="scope.row.group_secret"
+                      type="password"
+                      :show-password="true"
+                      clearable
+                    />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="t('common.action')" width="100" align="center">
+                  <template #default="scope">
+                    <el-button type="danger" link @click="removeAclDeclare(scope.$index)">
+                      <el-icon class="mr-2px">
+                        <Delete />
+                      </el-icon>
+                      {{ t('common.delete') }}
+                    </el-button>
+                  </template>
+                </el-table-column>
+                <template #empty>
+                  <div class="py-20px text-[var(--el-text-color-secondary)]">
+                    {{ t('easytier.aclDeclaresEmpty') }}
+                  </div>
+                </template>
+              </el-table>
+              <div
+                class="p-12px bg-[var(--el-fill-color-extra-light)] border-t border-[var(--el-border-color-lighter)] flex justify-center"
+              >
+                <el-button type="primary" plain @click="addAclDeclare">
+                  <el-icon class="mr-4px">
+                    <Plus />
+                  </el-icon>
+                  {{ t('easytier.aclAddDeclare') }}
+                </el-button>
+              </div>
+              <div class="px-12px py-8px text-12px text-[var(--el-text-color-secondary)]">
+                {{ t('easytier.aclDeclaresTip') }}
+              </div>
+            </div>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row v-for="(chain, ci) in aclChains" :key="ci">
+        <el-col :span="24">
+          <el-form-item label-width="0">
+            <el-card class="w-full" shadow="never">
+              <template #header>
+                <div class="flex items-center gap-8px flex-wrap">
+                  <el-input
+                    v-model="chain.name"
+                    :placeholder="t('easytier.aclChainName')"
+                    style="width: 180px"
+                    clearable
+                  />
+                  <el-select v-model="chain.chain_type" style="width: 110px">
+                    <el-option :label="t('easytier.aclChainInbound')" :value="1" />
+                    <el-option :label="t('easytier.aclChainOutbound')" :value="2" />
+                    <el-option :label="t('easytier.aclChainForward')" :value="3" />
+                    <el-option :label="t('easytier.aclUnspecified')" :value="0" />
+                  </el-select>
+                  <el-select v-model="chain.default_action" style="width: 110px">
+                    <el-option :label="t('easytier.aclActionAllow')" :value="1" />
+                    <el-option :label="t('easytier.aclActionDeny')" :value="2" />
+                  </el-select>
+                  <el-switch v-model="chain.enabled" />
+                  <el-input
+                    v-model="chain.description"
+                    :placeholder="t('easytier.aclDescription')"
+                    style="flex: 1; min-width: 160px"
+                    clearable
+                  />
+                  <el-button type="danger" link @click="removeAclChain(ci)">
+                    <el-icon class="mr-2px">
+                      <Delete />
+                    </el-icon>
+                    {{ t('common.delete') }}
+                  </el-button>
+                </div>
+              </template>
+              <el-table
+                :data="chain.rules"
+                style="width: 100%"
+                :header-cell-style="{
+                  background: 'var(--el-fill-color-light)',
+                  color: 'var(--el-text-color-primary)'
+                }"
+              >
+                <el-table-column prop="name" :label="t('easytier.aclRuleName')" min-width="140">
+                  <template #default="scope">
+                    <span>{{ scope.row.name || '-' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  prop="priority"
+                  :label="t('easytier.aclPriority')"
+                  width="90"
+                  align="center"
+                />
+                <el-table-column :label="t('easytier.aclAction')" width="90" align="center">
+                  <template #default="scope">
+                    <el-tag :type="scope.row.action === 2 ? 'danger' : 'success'">
+                      {{
+                        scope.row.action === 2
+                          ? t('easytier.aclActionDeny')
+                          : t('easytier.aclActionAllow')
+                      }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column :label="t('easytier.protocol')" width="90" align="center">
+                  <template #default="scope">
+                    {{ aclProtocolLabel(scope.row.protocol) }}
+                  </template>
+                </el-table-column>
+                <el-table-column :label="t('easytier.aclPorts')" min-width="120">
+                  <template #default="scope">
+                    <span>{{ (scope.row.ports || []).join(', ') || '-' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column :label="t('easytier.aclSourceGroups')" min-width="120">
+                  <template #default="scope">
+                    <span>{{ (scope.row.source_groups || []).join(', ') || '-' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column :label="t('easytier.aclDestGroups')" min-width="120">
+                  <template #default="scope">
+                    <span>{{ (scope.row.destination_groups || []).join(', ') || '-' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column :label="t('easytier.aclEnabled')" width="80" align="center">
+                  <template #default="scope">
+                    <el-switch v-model="scope.row.enabled" />
+                  </template>
+                </el-table-column>
+                <el-table-column :label="t('common.action')" width="140" align="center">
+                  <template #default="scope">
+                    <el-button type="primary" link @click="openAclRuleDialog(chain, scope.$index)">
+                      {{ t('easytier.aclEdit') }}
+                    </el-button>
+                    <el-button type="danger" link @click="removeAclRule(chain, scope.$index)">
+                      {{ t('common.delete') }}
+                    </el-button>
+                  </template>
+                </el-table-column>
+                <template #empty>
+                  <div class="py-16px text-[var(--el-text-color-secondary)]">
+                    {{ t('easytier.aclRulesEmpty') }}
+                  </div>
+                </template>
+              </el-table>
+              <div
+                class="p-12px bg-[var(--el-fill-color-extra-light)] border-t border-[var(--el-border-color-lighter)] flex justify-center"
+              >
+                <el-button type="primary" plain @click="addAclRule(chain)">
+                  <el-icon class="mr-4px">
+                    <Plus />
+                  </el-icon>
+                  {{ t('easytier.aclAddRule') }}
+                </el-button>
+              </div>
+            </el-card>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col :span="24">
+          <el-form-item label-width="0">
+            <el-button type="primary" plain @click="addAclChain">
+              <el-icon class="mr-4px">
+                <Plus />
+              </el-icon>
+              {{ t('easytier.aclAddChain') }}
+            </el-button>
+          </el-form-item>
+        </el-col>
+      </el-row>
     </el-form>
+
+    <el-dialog
+      v-model="aclRuleDialogVisible"
+      :title="aclRuleEditIndex >= 0 ? t('easytier.aclEditRule') : t('easytier.aclAddRule')"
+      width="640px"
+      append-to-body
+    >
+      <el-form :model="aclRuleForm" label-width="150px">
+        <el-form-item :label="t('easytier.aclRuleName')">
+          <el-input v-model="aclRuleForm.name" clearable />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclDescription')">
+          <el-input v-model="aclRuleForm.description" clearable />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclPriority')">
+          <el-input-number v-model="aclRuleForm.priority" :min="0" :max="65535" />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclAction')">
+          <el-select v-model="aclRuleForm.action" style="width: 200px">
+            <el-option :label="t('easytier.aclActionAllow')" :value="1" />
+            <el-option :label="t('easytier.aclActionDeny')" :value="2" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('easytier.protocol')">
+          <el-select v-model="aclRuleForm.protocol" style="width: 200px">
+            <el-option label="TCP" :value="1" />
+            <el-option label="UDP" :value="2" />
+            <el-option label="ICMP" :value="3" />
+            <el-option label="ICMPv6" :value="4" />
+            <el-option :label="t('easytier.aclProtocolAny')" :value="5" />
+            <el-option :label="t('easytier.aclUnspecified')" :value="0" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclPorts')">
+          <el-input v-model="aclRuleForm.portsStr" placeholder="3389, 8000-9000" clearable />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclSourcePorts')">
+          <el-input v-model="aclRuleForm.sourcePortsStr" clearable />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclSourceGroups')">
+          <el-input v-model="aclRuleForm.sourceGroupsStr" clearable />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclDestGroups')">
+          <el-input v-model="aclRuleForm.destGroupsStr" clearable />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclSourceIps')">
+          <el-input v-model="aclRuleForm.sourceIpsStr" placeholder="10.144.144.2/32" clearable />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclDestIps')">
+          <el-input v-model="aclRuleForm.destIpsStr" clearable />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclRateLimit')">
+          <el-input-number v-model="aclRuleForm.rate_limit" :min="0" :step="1024" />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclBurstLimit')">
+          <el-input-number v-model="aclRuleForm.burst_limit" :min="0" :step="1024" />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclStateful')">
+          <el-switch v-model="aclRuleForm.stateful" />
+        </el-form-item>
+        <el-form-item :label="t('easytier.aclEnabled')">
+          <el-switch v-model="aclRuleForm.enabled" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="aclRuleDialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="saveAclRule">{{ t('common.ok') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -1704,6 +1992,7 @@ import {
   Delete,
   Document,
   InfoFilled,
+  Key,
   Operation,
   Plus,
   Refresh,
@@ -2355,6 +2644,171 @@ const addPortForward = () => {
 
 const removePortForward = (index: number) => {
   localFormData.value.port_forward.splice(index, 1)
+}
+
+// ===== ACL 访问控制 =====
+const ensureAcl = (): AclV1 => {
+  if (!localFormData.value.acl) {
+    localFormData.value.acl = { acl_v1: {} }
+  }
+  if (!localFormData.value.acl.acl_v1) {
+    localFormData.value.acl.acl_v1 = {}
+  }
+  return localFormData.value.acl.acl_v1
+}
+
+const aclMembers = computed<string[]>({
+  get: () => localFormData.value.acl?.acl_v1?.group?.members ?? [],
+  set: (val) => {
+    const v1 = ensureAcl()
+    if (!v1.group) v1.group = {}
+    if (val && val.length > 0) {
+      v1.group.members = val
+    } else {
+      delete v1.group.members
+    }
+  }
+})
+
+const aclDeclares = computed<AclGroupDeclare[]>(
+  () => localFormData.value.acl?.acl_v1?.group?.declares ?? []
+)
+
+const addAclDeclare = () => {
+  const v1 = ensureAcl()
+  if (!v1.group) v1.group = {}
+  if (!v1.group.declares) v1.group.declares = []
+  v1.group.declares.push({ group_name: '', group_secret: '' })
+}
+
+const removeAclDeclare = (index: number) => {
+  localFormData.value.acl?.acl_v1?.group?.declares?.splice(index, 1)
+}
+
+const aclChains = computed<AclChain[]>(() => localFormData.value.acl?.acl_v1?.chains ?? [])
+
+const addAclChain = () => {
+  const v1 = ensureAcl()
+  if (!v1.chains) v1.chains = []
+  v1.chains.push({
+    name: '',
+    chain_type: 1,
+    default_action: 2,
+    enabled: true,
+    description: '',
+    rules: []
+  })
+}
+
+const removeAclChain = (index: number) => {
+  localFormData.value.acl?.acl_v1?.chains?.splice(index, 1)
+}
+
+const addAclRule = (chain: AclChain) => {
+  if (!chain.rules) chain.rules = []
+  chain.rules.push({
+    name: '',
+    priority: 1000,
+    action: 1,
+    protocol: 5,
+    enabled: true
+  })
+}
+
+const removeAclRule = (chain: AclChain, index: number) => {
+  chain.rules?.splice(index, 1)
+}
+
+const aclProtocolLabel = (protocol?: number) => {
+  switch (protocol) {
+    case 1:
+      return 'TCP'
+    case 2:
+      return 'UDP'
+    case 3:
+      return 'ICMP'
+    case 4:
+      return 'ICMPv6'
+    case 5:
+      return t('easytier.aclProtocolAny')
+    default:
+      return t('easytier.aclUnspecified')
+  }
+}
+
+// 规则编辑对话框：数组字段在表单里用逗号分隔字符串编辑
+const aclRuleDialogVisible = ref(false)
+const aclRuleEditIndex = ref(-1) // -1 表示新增
+const aclRuleChain = ref<AclChain | null>(null)
+const aclRuleForm = ref<any>({})
+
+const openAclRuleDialog = (chain: AclChain, index: number) => {
+  aclRuleChain.value = chain
+  aclRuleEditIndex.value = index
+  const rule: AclRule = (index >= 0 ? chain.rules?.[index] : undefined) ?? ({} as AclRule)
+  aclRuleForm.value = {
+    name: rule.name ?? '',
+    description: rule.description ?? '',
+    priority: rule.priority ?? 1000,
+    action: rule.action ?? 1,
+    protocol: rule.protocol ?? 5,
+    portsStr: (rule.ports ?? []).join(', '),
+    sourcePortsStr: (rule.source_ports ?? []).join(', '),
+    sourceGroupsStr: (rule.source_groups ?? []).join(', '),
+    destGroupsStr: (rule.destination_groups ?? []).join(', '),
+    sourceIpsStr: (rule.source_ips ?? []).join(', '),
+    destIpsStr: (rule.destination_ips ?? []).join(', '),
+    rate_limit: rule.rate_limit ?? 0,
+    burst_limit: rule.burst_limit ?? 0,
+    stateful: rule.stateful ?? false,
+    enabled: rule.enabled ?? true
+  }
+  aclRuleDialogVisible.value = true
+}
+
+const splitList = (value: string): string[] | undefined => {
+  const list = (value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return list.length > 0 ? list : undefined
+}
+
+const saveAclRule = () => {
+  const chain = aclRuleChain.value
+  if (!chain) return
+  if (!chain.rules) chain.rules = []
+  const form = aclRuleForm.value
+  const rule: AclRule = {
+    name: form.name,
+    priority: form.priority,
+    action: form.action,
+    protocol: form.protocol,
+    enabled: form.enabled,
+    rate_limit: form.rate_limit,
+    burst_limit: form.burst_limit,
+    stateful: form.stateful
+  }
+  if (form.description) rule.description = form.description
+  const ports = splitList(form.portsStr)
+  if (ports) rule.ports = ports
+  const sourcePorts = splitList(form.sourcePortsStr)
+  if (sourcePorts) rule.source_ports = sourcePorts
+  const sourceGroups = splitList(form.sourceGroupsStr)
+  if (sourceGroups) rule.source_groups = sourceGroups
+  const destGroups = splitList(form.destGroupsStr)
+  if (destGroups) rule.destination_groups = destGroups
+  const sourceIps = splitList(form.sourceIpsStr)
+  if (sourceIps) rule.source_ips = sourceIps
+  const destIps = splitList(form.destIpsStr)
+  if (destIps) rule.destination_ips = destIps
+
+  if (aclRuleEditIndex.value >= 0) {
+    chain.rules[aclRuleEditIndex.value] = rule
+  } else {
+    chain.rules.push(rule)
+  }
+  aclRuleDialogVisible.value = false
 }
 
 const validateForm = () => {

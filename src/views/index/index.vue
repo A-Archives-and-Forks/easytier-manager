@@ -745,7 +745,9 @@ const startAction = async () => {
 
   await runEasyTierCore(currentNodeKey.value.fileName!)
     .then(async (res) => {
-      if (res === 403) throw new Error('内核启动失败')
+      if (res === 403 || res?.code === 403) {
+        throw new Error(res?.msg ? `配置校验失败：${res.msg}` : '内核启动失败')
+      }
       // info(`运行配置结果:${JSON.stringify(res)}`)
       easyTierStore.stopSetRoute = false
       await updateRunningList()
@@ -756,11 +758,12 @@ const startAction = async () => {
       // descriptionCollapse.value = true
       trayStore.setTrayTooltip('当前运行配置：' + currentNodeKey.value.configFileName)
     })
-    .catch(async () => {
+    .catch(async (e: any) => {
       isStarting.value = false
       ElMessageBox({
         title: '哦豁，出错啦',
-        message: '运行当前配置出错，请在设置检查是否有核心程序，或核心程序是否有可执行权限',
+        message:
+          e?.message || '运行当前配置出错，请在设置检查是否有核心程序，或核心程序是否有可执行权限',
         type: 'error',
         draggable: true,
         confirmButtonText: t('common.ok')

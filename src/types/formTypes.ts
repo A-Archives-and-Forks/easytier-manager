@@ -104,6 +104,7 @@ export interface EasyTierFormData {
   file_logger: Partial<FileLogger>
   vpn_portal_config: Partial<VpnPortalConfig> | any
   port_forward: { bind_addr: string; dst_addr: string; proto: string }[]
+  acl?: AclConfig | undefined // 访问控制（ACL），不配置时不写入 TOML
   flags: Partial<Flags>
 }
 
